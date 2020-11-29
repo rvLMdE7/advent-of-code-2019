@@ -15,9 +15,9 @@ main = do
     print $ part1 input
 
 part1 :: V.Vector Int -> Int
-part1 prog = runIntcodeProg 0 (prog V.// [(1, 12), (2, 2)])
+part1 prog = runIntcodeProg 0 (prog V.// [(1, 12), (2, 2)]) V.! 0
 
-runIntcodeProg :: Int -> V.Vector Int -> Int
+runIntcodeProg :: Int -> V.Vector Int -> V.Vector Int
 runIntcodeProg iPtr prog = case prog V.! iPtr of
     1 ->
       let
@@ -31,7 +31,7 @@ runIntcodeProg iPtr prog = case prog V.! iPtr of
         y = prog V.! (iPtr + 2)
       in
         runIntcodeProg (iPtr + 4) (prog V.// [(iPtr + 3, x * y)])
-    99 -> prog V.! 0
+    99 -> prog
 
 readUtf8File :: FilePath -> IO T.Text
 readUtf8File path = TE.decodeUtf8 <$> B.readFile path
