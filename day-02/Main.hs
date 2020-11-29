@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import Data.Vector qualified as V
 import Data.ByteString qualified as B
@@ -36,7 +37,7 @@ readUtf8File :: FilePath -> IO T.Text
 readUtf8File path = TE.decodeUtf8 <$> B.readFile path
 
 parseInput :: T.Text -> V.Vector Int
-parseInput = T.lines .> fmap readInt .> V.fromList
+parseInput = T.splitOn "," .> fmap readInt .> V.fromList
   where
     readInt :: T.Text -> Int
     readInt txt = case TR.decimal txt of
