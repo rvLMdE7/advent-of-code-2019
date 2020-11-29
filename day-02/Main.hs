@@ -1,6 +1,8 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NumericUnderscores #-}
 
+import Control.Monad (guard)
 import Data.Vector qualified as V
 import Data.ByteString qualified as B
 import Data.Text qualified as T
@@ -13,9 +15,18 @@ main :: IO ()
 main = do
     input <- parseInput <$> readUtf8File "input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: V.Vector Int -> Int
 part1 prog = runIntcodeProg 0 (prog V.// [(1, 12), (2, 2)]) V.! 0
+
+part2 :: V.Vector Int -> Int
+part2 prog = head $ do
+    noun <- [0..99]
+    verb <- [0..99]
+    let result = runIntcodeProg 0 (prog V.// [(1, noun), (2, verb)]) V.! 0
+    guard $ result == 19_690_720
+    pure (100 * noun + verb)
 
 runIntcodeProg :: Int -> V.Vector Int -> V.Vector Int
 runIntcodeProg iPtr prog = case prog V.! iPtr of
