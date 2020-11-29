@@ -21,16 +21,24 @@ runIntcodeProg :: Int -> V.Vector Int -> V.Vector Int
 runIntcodeProg iPtr prog = case prog V.! iPtr of
     1 ->
       let
-        x = prog V.! (iPtr + 1)
-        y = prog V.! (iPtr + 2)
+        xSrc = prog V.! (iPtr + 1)
+        ySrc = prog V.! (iPtr + 2)
+        x = prog V.! xSrc
+        y = prog V.! ySrc
+        dest = prog V.! (iPtr + 3)
+        newProg = prog V.// [(dest, x + y)]
       in
-        runIntcodeProg (iPtr + 4) (prog V.// [(iPtr + 3, x + y)])
+        runIntcodeProg (iPtr + 4) newProg
     2 ->
       let
-        x = prog V.! (iPtr + 1)
-        y = prog V.! (iPtr + 2)
+        xSrc = prog V.! (iPtr + 1)
+        ySrc = prog V.! (iPtr + 2)
+        x = prog V.! xSrc
+        y = prog V.! ySrc
+        dest = prog V.! (iPtr + 3)
+        newProg = prog V.// [(dest, x * y)]
       in
-        runIntcodeProg (iPtr + 4) (prog V.// [(iPtr + 3, x * y)])
+        runIntcodeProg (iPtr + 4) newProg
     99 -> prog
 
 readUtf8File :: FilePath -> IO T.Text
