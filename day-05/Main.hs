@@ -5,6 +5,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 import Data.Bifunctor (first)
+import Data.Bool (bool)
 import Control.Monad.ST (ST, runST)
 import Data.Vector qualified as V
 import Data.Vector.Mutable qualified as VM
@@ -23,9 +24,13 @@ main :: IO ()
 main = do
     input <- parseInput <$> readUtf8File "input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: V.Vector Int -> Int
 part1 prog = last $ evalIntcodeProg [1] prog
+
+part2 :: V.Vector Int -> Int
+part2 prog = last $ evalIntcodeProg [5] prog
 
 execIntcodeProg :: [Int] -> V.Vector Int -> V.Vector Int
 execIntcodeProg inputs prog = snd $ runIntcodeProg inputs prog
@@ -78,6 +83,22 @@ interpretIntcodeProg iPtr' inputs' prog' =
             4 -> do
                 x <- readParam 1
                 go (iPtr + 2) inputs (x : outputs) prog
+
+            n | n `elem` [5, 6] -> do
+                let decideJump = if n == 5 then bool else flip bool
+                cond <- (== 0) <$> readParam 1
+                ptr <- readParam 2
+                let nextPtr = decideJump ptr (iPtr + 3) cond
+                go nextPtr inputs outputs prog
+
+            n | n `elem` [7, 8] -> do
+                let op = if n == 7 then (<) else (==)
+                x <- readParam 1
+                y <- readParam 2
+                let result = if x `op` y then 1 else 0
+                dest <- readProgOffset 3
+                VM.write prog dest result
+                go (iPtr + 4) inputs outputs prog
 
             99 -> pure outputs
 
