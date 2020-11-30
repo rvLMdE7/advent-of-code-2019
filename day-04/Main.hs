@@ -21,7 +21,9 @@ getDigits :: Int -> [Int]
 getDigits = show .> fmap (\c -> read [c])
 
 hasTwoAdjacent :: Eq a => [a] -> Bool
-hasTwoAdjacent = group .> any (length .> (> 1))
+hasTwoAdjacent xs = any (> 1) grouped
+  where
+    grouped = length <$> group xs
 
 isNonDecreasing :: Ord a => [a] -> Bool
 isNonDecreasing list = case list of
