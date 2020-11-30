@@ -23,7 +23,7 @@ isPossiblePassword n = hasTwoAdjacent digits && isNonDecreasing digits
 
 isVeryPossiblePassword :: Int -> Bool
 isVeryPossiblePassword n =
-    hasTwoAdjacentButNoMore digits && isNonDecreasing digits
+    hasExactlyTwoAdjacentSomewhere digits && isNonDecreasing digits
   where
     digits = getDigits n
 
@@ -35,8 +35,8 @@ hasTwoAdjacent xs = any (> 1) grouped
   where
     grouped = length <$> group xs
 
-hasTwoAdjacentButNoMore :: Eq a => [a] -> Bool
-hasTwoAdjacentButNoMore xs = any (> 1) grouped && all (<= 2) grouped
+hasExactlyTwoAdjacentSomewhere :: Eq a => [a] -> Bool
+hasExactlyTwoAdjacentSomewhere xs = 2 `elem` grouped
   where
     grouped = length <$> group xs
 
