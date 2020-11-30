@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 import Data.Bifunctor (first)
 import Control.Monad.ST (ST, runST)
@@ -12,6 +13,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Text.Read qualified as TR
 import Flow ((.>))
+import Language.Haskell.Printf qualified as Pr
 
 
 data ParamMode = Position | Immediate
@@ -77,6 +79,17 @@ interpretIntcodeProg iPtr' inputs' = go iPtr' inputs' []
                 go (iPtr + 2) inputs (x : outputs) prog
 
             99 -> pure outputs
+
+            n -> do
+                finalProg <- V.freeze prog
+                let errMsg = [Pr.s|interpretIntcodeProg:
+  opcode = %?
+  instr-ptr = %?
+  inputs = %?
+  outputs = %?
+  prog = %?|]
+                        n iPtr inputs outputs finalProg
+                error errMsg
 
 getOpcodeAndParamModes :: Int -> (Int, [ParamMode])
 getOpcodeAndParamModes x = (parseDigits opCode, fmap mkParamMode paramModes)
