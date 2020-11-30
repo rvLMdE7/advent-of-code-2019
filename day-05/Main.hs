@@ -42,7 +42,8 @@ runIntcodeProg inputs prog = runST $ do
 
 interpretIntcodeProg
     :: forall s. Int -> [Int] -> VM.MVector s Int -> ST s [Int]
-interpretIntcodeProg iPtr' inputs' = go iPtr' inputs' []
+interpretIntcodeProg iPtr' inputs' prog' =
+    reverse <$> go iPtr' inputs' [] prog'
   where
     go :: Int -> [Int] -> [Int] -> VM.MVector s Int -> ST s [Int]
     go iPtr inputs outputs prog = do
@@ -54,7 +55,7 @@ interpretIntcodeProg iPtr' inputs' = go iPtr' inputs' []
             readProgOffset i = VM.read prog (iPtr + i)
 
             readParam :: Int -> ST s Int
-            readParam i = case indexDefault Position paramModes i of
+            readParam i = case indexDefault Position paramModes (i - 1) of
                 Immediate -> readProgOffset i
                 Position -> do
                     j <- readProgOffset i
@@ -63,19 +64,19 @@ interpretIntcodeProg iPtr' inputs' = go iPtr' inputs' []
         case opCode of
             n | n `elem` [1, 2] -> do
                 let op = if n == 1 then (+) else (*)
-                x <- op <$> readParam 0 <*> readParam 1
-                dest <- readProgOffset 2
+                x <- op <$> readParam 1 <*> readParam 2
+                dest <- readProgOffset 3
                 VM.write prog dest x
                 go (iPtr + 4) inputs outputs prog
 
             3 -> do
                 let input : otherInputs = inputs
-                dest <- readProgOffset 0
+                dest <- readProgOffset 1
                 VM.write prog dest input
                 go (iPtr + 2) otherInputs outputs prog
 
             4 -> do
-                x <- readParam 0
+                x <- readParam 1
                 go (iPtr + 2) inputs (x : outputs) prog
 
             99 -> pure outputs
