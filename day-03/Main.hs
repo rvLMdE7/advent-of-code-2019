@@ -59,11 +59,7 @@ mkVec dir n = case dir of
     D -> (0, -n)
 
 mkVecs :: Direc -> Int -> [(Int, Int)]
-mkVecs dir n = case dir of
-    L -> [ (-x, 0) | x <- [1..n] ]
-    R -> [ (x, 0) | x <- [1..n] ]
-    U -> [ (0, x) | x <- [1..n] ]
-    D -> [ (0, -x) | x <- [1..n] ]
+mkVecs dir n = [ mkVec dir x | x <- [1..n] ]
 
 addPt :: (Int, Int) -> (Int, Int) -> (Int, Int)
 addPt (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
