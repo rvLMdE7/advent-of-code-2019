@@ -23,12 +23,20 @@ main = do
     print $ part1 input
 
 part1 :: V.Vector Int -> Int
-part1 prog = last $ runIntcodeProg [1] prog
+part1 prog = last $ evalIntcodeProg [1] prog
 
-runIntcodeProg :: [Int] -> V.Vector Int -> [Int]
+execIntcodeProg :: [Int] -> V.Vector Int -> V.Vector Int
+execIntcodeProg inputs prog = snd $ runIntcodeProg inputs prog
+
+evalIntcodeProg :: [Int] -> V.Vector Int -> [Int]
+evalIntcodeProg inputs prog = fst $ runIntcodeProg inputs prog
+
+runIntcodeProg :: [Int] -> V.Vector Int -> ([Int], V.Vector Int)
 runIntcodeProg inputs prog = runST $ do
     mProg <- V.thaw prog
-    interpretIntcodeProg 0 inputs mProg
+    outputs <- interpretIntcodeProg 0 inputs mProg
+    finalProg <- V.freeze mProg
+    pure (outputs, finalProg)
 
 interpretIntcodeProg
     :: forall s. Int -> [Int] -> VM.MVector s Int -> ST s [Int]
