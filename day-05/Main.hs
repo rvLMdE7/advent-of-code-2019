@@ -52,11 +52,9 @@ interpretIntcodeProg iPtr' inputs' prog' =
   where
     go :: Int -> [Int] -> [Int] -> VM.MVector s Int -> ST s [Int]
     go iPtr inputs outputs prog = do
-        instr <- VM.read prog iPtr
+        (opCode, paramModes) <- getOpcodeAndParamModes <$> VM.read prog iPtr
 
-        let (opCode, paramModes) = getOpcodeAndParamModes instr
-
-            readProgOffset :: Int -> ST s Int
+        let readProgOffset :: Int -> ST s Int
             readProgOffset i = VM.read prog (iPtr + i)
 
             readParam :: Int -> ST s Int
