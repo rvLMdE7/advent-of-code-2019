@@ -24,23 +24,10 @@ part1 tree = length $ concatMap (`allParents` tree) (Tr.flatten tree)
 part2 :: Tr.Tree T.Text -> Int
 part2 tree = fromJust $ distance "YOU" "SAN" tree
 
-directChildren :: Eq a => a -> Tr.Tree a -> [a]
-directChildren node (Tr.Node x xs)
-    | x == node = Tr.rootLabel <$> xs
-    | otherwise = concatMap (directChildren node) xs
-
-indirectChildren :: Eq a => a -> Tr.Tree a -> [a]
-indirectChildren node (Tr.Node x xs)
-    | x == node = concatMap Tr.flatten (concatMap Tr.subForest xs)
-    | otherwise = concatMap (indirectChildren node) xs
-
 directParent :: Eq a => a -> Tr.Tree a -> Maybe a
 directParent node (Tr.Node x xs)
     | node `elem` fmap Tr.rootLabel xs = Just x
     | otherwise = listToMaybe $ mapMaybe (directParent node) xs
-
-indirectParents :: Eq a => a -> Tr.Tree a -> [a]
-indirectParents node tree = drop 1 $ allParents node tree
 
 allParents :: Eq a => a -> Tr.Tree a -> [a]
 allParents node tree = reverse $ go [] node
