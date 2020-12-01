@@ -2,8 +2,9 @@
 
 import Data.Bifunctor (second)
 import Data.ByteString qualified as B
+import Data.List qualified as L
 import Data.List.NonEmpty qualified as N
-import Data.Maybe (mapMaybe, listToMaybe)
+import Data.Maybe (fromJust, mapMaybe, listToMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Tree qualified as Tr
@@ -15,13 +16,13 @@ main :: IO ()
 main = do
     input <- (makeTree <. parseInputs) <$> readUtf8File "input.txt"
     print $ part1 input
+    print $ part2 input
 
-part1 :: Eq a => Tr.Tree a -> Int
-part1 tree = numDirectOrbits + numIndirectOrbits
-  where
-    nodes = Tr.flatten tree
-    numDirectOrbits = length $ mapMaybe (`directParent` tree) nodes
-    numIndirectOrbits = length $ concatMap (`indirectParents` tree) nodes
+part1 :: Tr.Tree T.Text -> Int
+part1 tree = length $ concatMap (`allParents` tree) (Tr.flatten tree)
+
+part2 :: Tr.Tree T.Text -> Int
+part2 tree = fromJust $ distance "YOU" "SAN" tree
 
 directChildren :: Eq a => a -> Tr.Tree a -> [a]
 directChildren node (Tr.Node x xs)
@@ -39,11 +40,23 @@ directParent node (Tr.Node x xs)
     | otherwise = listToMaybe $ mapMaybe (directParent node) xs
 
 indirectParents :: Eq a => a -> Tr.Tree a -> [a]
-indirectParents node tree = drop 1 $ reverse $ go [] node
+indirectParents node tree = drop 1 $ allParents node tree
+
+allParents :: Eq a => a -> Tr.Tree a -> [a]
+allParents node tree = reverse $ go [] node
   where
     go acc x = case directParent x tree of
         Just y -> go (y:acc) y
         Nothing -> acc
+
+distance :: Eq a => a -> a -> Tr.Tree a -> Maybe Int
+distance x y tree = do
+    let xParents = allParents x tree
+        yParents = allParents y tree
+    commonAncestor <- listToMaybe (xParents `L.intersect` yParents)
+    xDist <- L.elemIndex commonAncestor xParents
+    yDist <- L.elemIndex commonAncestor yParents
+    pure $ xDist + yDist
 
 makeTree :: Eq a => N.NonEmpty (a, a) -> Tr.Tree a
 makeTree arcs = Tr.unfoldTree lookupChildren base
