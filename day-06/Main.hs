@@ -3,7 +3,7 @@
 import Data.Bifunctor (second)
 import Data.ByteString qualified as B
 import Data.List.NonEmpty qualified as N
-import Data.Maybe (mapMaybe, listToMaybe, maybeToList)
+import Data.Maybe (mapMaybe, listToMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Tree qualified as Tr
@@ -20,14 +20,8 @@ part1 :: Eq a => Tr.Tree a -> Int
 part1 tree = numDirectOrbits + numIndirectOrbits
   where
     nodes = Tr.flatten tree
-    numDirectOrbits = length $ concatMap (`directOrbits` tree) nodes
-    numIndirectOrbits = length $ concatMap (`indirectOrbits` tree) nodes
-
-directOrbits :: Eq a => a -> Tr.Tree a -> [a]
-directOrbits node tree = maybeToList $ directParent node tree
-
-indirectOrbits :: Eq a => a -> Tr.Tree a -> [a]
-indirectOrbits = indirectParents
+    numDirectOrbits = length $ mapMaybe (`directParent` tree) nodes
+    numIndirectOrbits = length $ concatMap (`indirectParents` tree) nodes
 
 directChildren :: Eq a => a -> Tr.Tree a -> [a]
 directChildren node (Tr.Node x xs)
