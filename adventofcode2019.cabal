@@ -23,6 +23,11 @@ common common-options
     , th-printf
     , vector
 
+common common-exe-options
+  import: common-options
+  build-depends: adventofcode2019
+  hs-source-dirs: run
+
 library
   import: common-options
   hs-source-dirs:
@@ -41,37 +46,31 @@ library
     , Day06
 
 executable day01
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main01.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day01 as Day)
+  main-is: Main.hs
 
 executable day02
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main02.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day02 as Day)
+  main-is: Main.hs
 
 executable day03
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main03.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day03 as Day)
+  main-is: Main.hs
 
 executable day04
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main04.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day04 as Day)
+  main-is: Main.hs
 
 executable day05
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main05.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day05 as Day)
+  main-is: Main.hs
 
 executable day06
-  import: common-options
-  hs-source-dirs: run
-  build-depends: adventofcode2019
-  main-is: Main06.hs
+  import: common-exe-options
+  mixins: adventofcode2019 (Day06 as Day)
+  main-is: Main.hs
