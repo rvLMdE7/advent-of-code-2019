@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+module Day06 where
+
 import Data.Bifunctor (second)
 import Data.ByteString qualified as B
 import Data.List qualified as L
@@ -14,7 +16,7 @@ import Flow ((<.), (.>))
 
 main :: IO ()
 main = do
-    input <- (makeTree <. parseInputs) <$> readUtf8File "input.txt"
+    input <- (makeTree <. parseInputs) <$> readUtf8File "day-06/input.txt"
     print $ part1 input
     print $ part2 input
 

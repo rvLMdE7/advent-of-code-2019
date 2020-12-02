@@ -1,5 +1,6 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+module Day03 where
 
 import Data.ByteString qualified as B
 import Data.Foldable (minimumBy)
@@ -17,7 +18,7 @@ data Direc = L | R | U | D
 
 main :: IO ()
 main = do
-    input <- parseInput <$> readUtf8File "input.txt"
+    input <- parseInput <$> readUtf8File "day-03/input.txt"
     print $ uncurry part1 input
     print $ uncurry part2 input
 

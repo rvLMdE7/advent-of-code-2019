@@ -1,8 +1,8 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE QuasiQuotes #-}
+
+module Day05 where
 
 import Data.Bifunctor (first)
 import Data.Bool (bool)
@@ -22,7 +22,7 @@ data ParamMode = Position | Immediate
 
 main :: IO ()
 main = do
-    input <- parseInput <$> readUtf8File "input.txt"
+    input <- parseInput <$> readUtf8File "day-05/input.txt"
     print $ part1 input
     print $ part2 input
 

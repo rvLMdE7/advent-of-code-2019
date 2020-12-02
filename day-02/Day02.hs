@@ -1,6 +1,6 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NumericUnderscores #-}
+
+module Day02 where
 
 import Control.Monad (guard)
 import Data.Vector qualified as V
@@ -13,7 +13,7 @@ import Flow ((.>))
 
 main :: IO ()
 main = do
-    input <- parseInput <$> readUtf8File "input.txt"
+    input <- parseInput <$> readUtf8File "day-02/input.txt"
     print $ part1 input
     print $ part2 input
 

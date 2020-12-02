@@ -1,4 +1,4 @@
-{-# LANGUAGE ImportQualifiedPost #-}
+module Day01 where
 
 import Data.ByteString qualified as B
 import Data.Text qualified as T
@@ -9,7 +9,7 @@ import Flow ((.>))
 
 main :: IO ()
 main = do
-    input <- parseInput <$> readUtf8File "input.txt"
+    input <- parseInput <$> readUtf8File "day-01/input.txt"
     print $ part1 input
     print $ part2 input
 

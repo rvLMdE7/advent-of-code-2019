@@ -1,4 +1,4 @@
-{-# LANGUAGE NumericUnderscores #-}
+module Day04 where
 
 import Flow ((.>))
 import Data.List (group)

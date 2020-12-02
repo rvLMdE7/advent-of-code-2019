@@ -1,0 +1,77 @@
+cabal-version: 2.2
+
+name: adventofcode2019
+version: 0.1.0.0
+author: rvLMdE7
+build-type: Simple
+
+source-repository head
+  type: git
+  location: https://github.com/rvLMdE7/advent-of-code-2019
+
+common common-options
+  default-language: Haskell2010
+  default-extensions:
+      ImportQualifiedPost
+    , NumericUnderscores
+  build-depends:
+      base ^>=4.14
+    , bytestring
+    , containers
+    , flow
+    , text
+    , th-printf
+    , vector
+
+library
+  import: common-options
+  hs-source-dirs:
+      day-01
+    , day-02
+    , day-03
+    , day-04
+    , day-05
+    , day-06
+  exposed-modules:
+      Day01
+    , Day02
+    , Day03
+    , Day04
+    , Day05
+    , Day06
+
+executable day01
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main01.hs
+
+executable day02
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main02.hs
+
+executable day03
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main03.hs
+
+executable day04
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main04.hs
+
+executable day05
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main05.hs
+
+executable day06
+  import: common-options
+  hs-source-dirs: run
+  build-depends: adventofcode2019
+  main-is: Main06.hs
