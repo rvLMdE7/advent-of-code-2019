@@ -9,11 +9,14 @@ source-repository head
   type: git
   location: https://github.com/rvLMdE7/advent-of-code-2019
 
-common common-options
+common common-lang-options
   default-language: Haskell2010
   default-extensions:
       ImportQualifiedPost
     , NumericUnderscores
+
+common common-lib-options
+  import: common-lang-options
   build-depends:
       base ^>=4.14
     , bytestring
@@ -24,12 +27,14 @@ common common-options
     , vector
 
 common common-exe-options
-  import: common-options
-  build-depends: adventofcode2019
+  import: common-lang-options
+  build-depends:
+      base
+    , adventofcode2019
   hs-source-dirs: run
 
 library
-  import: common-options
+  import: common-lib-options
   hs-source-dirs:
       day-01
     , day-02
