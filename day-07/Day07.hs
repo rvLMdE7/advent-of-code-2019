@@ -6,7 +6,6 @@
 
 module Day07 where
 
-import Control.Monad (replicateM)
 import Control.Monad.ST (ST, runST)
 import Data.Bifunctor (first)
 import Data.Bool (bool)
@@ -43,7 +42,7 @@ part1 prog = snd $ maxThrust prog
 
 maxThrust :: V.Vector Int -> (V5 Int, Int)
 maxThrust prog = L.maximumBy (comparing snd) $ do
-    [phase1, phase2, phase3, phase4, phase5] <- replicateM 5 [0..4]
+    [phase1, phase2, phase3, phase4, phase5] <- L.permutations [0..4]
     let phases = MkV5 phase1 phase2 phase3 phase4 phase5
     pure (phases, last $ evalSameAmplifiers phases [0] prog)
 
