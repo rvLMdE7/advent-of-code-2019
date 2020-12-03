@@ -45,6 +45,7 @@ library
     , day-05
     , day-06
     , day-07
+    , day-08
     , day-09
   exposed-modules:
       Day01
@@ -54,6 +55,7 @@ library
     , Day05
     , Day06
     , Day07
+    , Day08
     , Day09
 
 executable day01
@@ -89,6 +91,11 @@ executable day06
 executable day07
   import: common-exe-options
   mixins: adventofcode2019 (Day07 as Day)
+  main-is: Main.hs
+
+executable day08
+  import: common-exe-options
+  mixins: adventofcode2019 (Day08 as Day)
   main-is: Main.hs
 
 executable day09

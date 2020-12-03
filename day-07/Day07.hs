@@ -36,32 +36,65 @@ main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-07/input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: V.Vector Int -> Int
-part1 prog = snd $ maxThrust prog
+part1 prog = snd $ maxLinearThrust prog
 
-maxThrust :: V.Vector Int -> (V5 Int, Int)
-maxThrust prog = L.maximumBy (comparing snd) $ do
+part2 :: V.Vector Int -> Int
+part2 prog = snd $ maxLoopedThrust prog
+
+maxLinearThrust :: V.Vector Int -> (V5 Int, Int)
+maxLinearThrust prog = L.maximumBy (comparing snd) $ do
     [phase1, phase2, phase3, phase4, phase5] <- L.permutations [0..4]
     let phases = MkV5 phase1 phase2 phase3 phase4 phase5
-    pure (phases, last $ evalSameAmplifiers phases [0] prog)
+    pure (phases, last $ evalSameLinearAmplifiers phases [0] prog)
 
-evalSameAmplifiers :: V5 Int -> [Int] -> V.Vector Int -> [Int]
-evalSameAmplifiers phases input program =
-    fst $ runSameAmplifiers phases input program
+evalSameLinearAmplifiers :: V5 Int -> [Int] -> V.Vector Int -> [Int]
+evalSameLinearAmplifiers phases input program =
+    fst $ runSameLinearAmplifiers phases input program
 
-runSameAmplifiers
+runSameLinearAmplifiers
     :: V5 Int -> [Int] -> V.Vector Int -> ([Int], V5 (V.Vector Int))
-runSameAmplifiers phases input program =
-    runAmplifiers phases input (pure program)
+runSameLinearAmplifiers phases input program =
+    runLinearAmplifiers phases input (pure program)
 
-runAmplifiers
+runLinearAmplifiers
     :: V5 Int -> [Int] -> V5 (V.Vector Int) -> ([Int], V5 (V.Vector Int))
-runAmplifiers phases input programs =
+runLinearAmplifiers phases input programs =
   let
     MkV5 phase1 phase2 phase3 phase4 phase5 = phases
     MkV5 prog1 prog2 prog3 prog4 prog5 = programs
     (output1, endProg1) = runIntcodeProg (phase1 : input) prog1
+    (output2, endProg2) = runIntcodeProg (phase2 : output1) prog2
+    (output3, endProg3) = runIntcodeProg (phase3 : output2) prog3
+    (output4, endProg4) = runIntcodeProg (phase4 : output3) prog4
+    (output5, endProg5) = runIntcodeProg (phase5 : output4) prog5
+  in
+    (output5, MkV5 endProg1 endProg2 endProg3 endProg4 endProg5)
+
+maxLoopedThrust :: V.Vector Int -> (V5 Int, Int)
+maxLoopedThrust prog = L.maximumBy (comparing snd) $ do
+    [phase1, phase2, phase3, phase4, phase5] <- L.permutations [5..9]
+    let phases = MkV5 phase1 phase2 phase3 phase4 phase5
+    pure (phases, last $ evalSameLoopedAmplifiers phases [0] prog)
+
+evalSameLoopedAmplifiers :: V5 Int -> [Int] -> V.Vector Int -> [Int]
+evalSameLoopedAmplifiers phases input program =
+    fst $ runSameLoopedAmplifiers phases input program
+
+runSameLoopedAmplifiers
+    :: V5 Int -> [Int] -> V.Vector Int -> ([Int], V5 (V.Vector Int))
+runSameLoopedAmplifiers phases input program =
+    runLoopedAmplifiers phases input (pure program)
+
+runLoopedAmplifiers
+    :: V5 Int -> [Int] -> V5 (V.Vector Int) -> ([Int], V5 (V.Vector Int))
+runLoopedAmplifiers phases input programs =
+  let
+    MkV5 phase1 phase2 phase3 phase4 phase5 = phases
+    MkV5 prog1 prog2 prog3 prog4 prog5 = programs
+    (output1, endProg1) = runIntcodeProg (phase1 : input <> output5) prog1
     (output2, endProg2) = runIntcodeProg (phase2 : output1) prog2
     (output3, endProg3) = runIntcodeProg (phase3 : output2) prog3
     (output4, endProg4) = runIntcodeProg (phase4 : output3) prog4
