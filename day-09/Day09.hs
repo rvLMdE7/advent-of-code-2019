@@ -47,9 +47,15 @@ main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-09/input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: IM.IntMap Integer -> Integer
 part1 prog = case evalIntcodeProg [1] prog of
+    [x] -> x
+    out -> error $ [Printf.s|part1: bad output: %?|] out
+
+part2 :: IM.IntMap Integer -> Integer
+part2 prog = case evalIntcodeProg [2] prog of
     [x] -> x
     out -> error $ [Printf.s|part1: bad output: %?|] out
 
