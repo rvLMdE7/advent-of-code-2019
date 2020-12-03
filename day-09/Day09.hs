@@ -49,13 +49,20 @@ main = do
     print $ part1 input
 
 part1 :: IM.IntMap Int -> Int
-part1 prog = case runIntcodeProg [1] prog of
+part1 prog = case evalIntcodeProg [1] prog of
     [x] -> x
     out -> error $ [Printf.s|part1: bad output: %?|] out
 
-runIntcodeProg :: [Int] -> IM.IntMap Int -> [Int]
-runIntcodeProg input prog =
-    view #outputs $ execState interpretIntcodeProg $ MkIntcodeState
+evalIntcodeProg :: [Int] -> IM.IntMap Int -> [Int]
+evalIntcodeProg input prog = fst $ runIntcodeProg input prog
+
+execIntcodeProg :: [Int] -> IM.IntMap Int -> IM.IntMap Int
+execIntcodeProg input prog = snd $ runIntcodeProg input prog
+
+runIntcodeProg :: [Int] -> IM.IntMap Int -> ([Int], IM.IntMap Int)
+runIntcodeProg input prog = (view #outputs res, view #program res)
+  where
+    res = execState interpretIntcodeProg $ MkIntcodeState
         { instrPtr = 0
         , relBase = 0
         , inputs = input
@@ -84,8 +91,8 @@ interpretIntcodeProg = do
         pure $ getOpcodeAndParamModes (prog IM.! iPtr)
 
     let readParam i = case indexDefault Position paramModes (i - 1) of
-            Immediate -> readPosRelToIPtr i
             Position -> readPosRelToIPtr i >>= readPosAbs
+            Immediate -> readPosRelToIPtr i
             Relative -> do
                 rel <- gets (view #relBase)
                 j <- readPosRelToIPtr i
@@ -116,7 +123,7 @@ interpretIntcodeProg = do
 
         n | n `elem` [5, 6] -> do
             zero <- (== 0) <$> readParam 1
-            if zero `xor` (n == 5)
+            if zero `xor` (n == 6)
                 then #instrPtr += 3
                 else do
                     ptr <- readParam 2
@@ -166,9 +173,9 @@ parseDigits :: [Int] -> Int
 parseDigits = fmap intToDigit .> read
 
 indexDefault :: a -> [a] -> Int -> a
-indexDefault x list n = case list of
-    [] -> x
-    y:ys -> if n == 0 then y else indexDefault x ys (n - 1)
+indexDefault def list n = case list of
+    [] -> def
+    x:xs -> if n == 0 then x else indexDefault def xs (n - 1)
 
 cons :: a -> [a] -> [a]
 cons = (:)
