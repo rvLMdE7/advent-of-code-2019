@@ -11,7 +11,7 @@
 
 module Day09 where
 
-import Control.Monad.State (execState, State, MonadState, gets, evalState)
+import Control.Monad.State (execState, State, MonadState, gets)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as B
 import Data.Char (intToDigit, digitToInt)
@@ -22,7 +22,7 @@ import Data.Text.Read qualified as TR
 import Flow ((.>))
 import Language.Haskell.Printf qualified as Printf
 import Optics
-    ((^.),  Optic, Is, A_Setter
+    ( Optic, Is, A_Setter
     , noPrefixFieldLabels
     , makeFieldLabelsWith
     , view, at, (%)
@@ -33,12 +33,12 @@ import Optics.State.Operators ((%=), (.=), (?=))
 data ParamMode = Position | Immediate | Relative
     deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
-data IntcodeState = MkIntcodeState
+data IntcodeState a = MkIntcodeState
     { instrPtr :: Int
     , relBase :: Int
-    , inputs :: [Integer]
-    , outputs :: [Integer]
-    , program :: IM.IntMap Integer
+    , inputs :: [a]
+    , outputs :: [a]
+    , program :: IM.IntMap a
     } deriving (Eq, Ord, Read, Show)
 
 makeFieldLabelsWith noPrefixFieldLabels ''IntcodeState
@@ -53,13 +53,18 @@ part1 prog = case evalIntcodeProg [1] prog of
     [x] -> x
     out -> error $ [Printf.s|part1: bad output: %?|] out
 
-evalIntcodeProg :: [Integer] -> IM.IntMap Integer -> [Integer]
+evalIntcodeProg :: (Integral a, Show a, Read a) => [a] -> IM.IntMap a -> [a]
 evalIntcodeProg input prog = fst $ runIntcodeProg input prog
 
-execIntcodeProg :: [Integer] -> IM.IntMap Integer -> IM.IntMap Integer
+execIntcodeProg
+    :: (Integral a, Show a, Read a) => [a] -> IM.IntMap a -> IM.IntMap a
 execIntcodeProg input prog = snd $ runIntcodeProg input prog
 
-runIntcodeProg :: [Integer] -> IM.IntMap Integer -> ([Integer], IM.IntMap Integer)
+runIntcodeProg
+    :: (Integral a, Show a, Read a)
+    => [a]
+    -> IM.IntMap a
+    -> ([a], IM.IntMap a)
 runIntcodeProg input prog = (view #outputs res, view #program res)
   where
     res = execState interpretIntcodeProg $ MkIntcodeState
@@ -70,20 +75,21 @@ runIntcodeProg input prog = (view #outputs res, view #program res)
         , program = prog
         }
 
-readPosAbs :: Int -> State IntcodeState Integer
+readPosAbs :: Integral a => Int -> State (IntcodeState a) a
 readPosAbs i = do
     prog <- gets (view #program)
     pure $ IM.findWithDefault 0 i prog
 
-readPosRelToIPtr :: Int -> State IntcodeState Integer
+readPosRelToIPtr :: Integral a => Int -> State (IntcodeState a) a
 readPosRelToIPtr i = do
     iPtr <- gets (view #instrPtr)
     readPosAbs (iPtr + i)
 
-writePos :: Int -> Integer -> State IntcodeState ()
+writePos :: Int -> a -> State (IntcodeState a) ()
 writePos i val = #program % at i ?= val
 
-interpretIntcodeProg :: State IntcodeState ()
+interpretIntcodeProg
+    :: (Integral a, Show a, Read a) => State (IntcodeState a) ()
 interpretIntcodeProg = do
     (opCode, paramModes) <- do
         iPtr <- gets (view #instrPtr)
@@ -94,25 +100,25 @@ interpretIntcodeProg = do
             Immediate -> readPosRelToIPtr i
             Position -> do
                 j <- readPosRelToIPtr i
-                readPosAbs $ fromInteger j
+                readPosAbs $ fromIntegral j
             Relative -> do
                 rel <- gets (view #relBase)
                 j <- readPosRelToIPtr i
-                readPosAbs (fromInteger j + rel)
+                readPosAbs (fromIntegral j + rel)
 
     case opCode of
         n | n `elem` [1, 2] -> do
             let op = if n == 1 then (+) else (*)
             x <- op <$> readParam 1 <*> readParam 2
             dest <- readPosRelToIPtr 3
-            writePos (fromInteger dest) x
+            writePos (fromIntegral dest) x
             #instrPtr += 4
             interpretIntcodeProg
 
         3 -> do
             ~(i : is) <- gets (view #inputs)
             dest <- readPosRelToIPtr 1
-            writePos (fromInteger dest) i
+            writePos (fromIntegral dest) i
             #inputs .= is
             #instrPtr += 2
             interpretIntcodeProg
@@ -129,7 +135,7 @@ interpretIntcodeProg = do
                 then #instrPtr += 3
                 else do
                     ptr <- readParam 2
-                    #instrPtr .= fromInteger ptr
+                    #instrPtr .= fromIntegral ptr
             interpretIntcodeProg
 
         n | n `elem` [7, 8] -> do
@@ -137,13 +143,13 @@ interpretIntcodeProg = do
                 runOp x y = if x `op` y then 1 else 0
             b <- runOp <$> readParam 1 <*> readParam 2
             dest <- readPosRelToIPtr 3
-            writePos (fromInteger dest) b
+            writePos (fromIntegral dest) b
             #instrPtr += 4
             interpretIntcodeProg
 
         9 -> do
             rel <- readParam 1
-            #relBase += fromInteger rel
+            #relBase += fromIntegral rel
             #instrPtr += 2
             interpretIntcodeProg
 
@@ -152,7 +158,8 @@ interpretIntcodeProg = do
         _ -> error $
             [Printf.s|interpretIntcodeProg: unexpected opcode %i|] opCode
 
-getOpcodeAndParamModes :: Integer -> (Integer, [ParamMode])
+getOpcodeAndParamModes
+    :: (Integral a, Show a, Read a) => a -> (a, [ParamMode])
 getOpcodeAndParamModes instr =
     (parseDigits opCode, fmap mkParamMode paramModes)
   where
@@ -168,10 +175,10 @@ getOpcodeAndParamModes instr =
     encountered unexpected param mode %i|]
                 instr p
 
-getDigits :: Integer -> [Int]
+getDigits :: (Integral a, Show a) => a -> [Int]
 getDigits = show .> fmap digitToInt
 
-parseDigits :: [Int] -> Integer
+parseDigits :: (Integral a, Read a) => [Int] -> a
 parseDigits = fmap intToDigit .> read
 
 indexDefault :: a -> [a] -> Int -> a
@@ -195,10 +202,9 @@ optic += x = optic %= (+ x)
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
 
-parseInput :: T.Text -> IM.IntMap Integer
+parseInput :: Integral a => T.Text -> IM.IntMap a
 parseInput = T.splitOn "," .> fmap readInt .> zip [0..] .> IM.fromList
   where
-    readInt :: T.Text -> Integer
     readInt txt = case TR.signed TR.decimal txt of
         Left _ -> error "parseInput: input not an Int"
         Right (n, _) -> n
