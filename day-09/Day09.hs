@@ -180,10 +180,7 @@ getOpcodeAndParamModes instr =
         | p == 1 = Immediate
         | p == 2 = Relative
         | otherwise = error $
-            [Printf.s|getOpcodeAndParamModes:
-  while parsing instruction %i:
-    encountered unexpected param mode %i|]
-                instr p
+            [Printf.s|getOpcodeAndParamModes: unexpected param mode %i|] p
 
 getDigits :: (Integral a, Show a) => a -> [Int]
 getDigits = show .> fmap digitToInt
