@@ -72,8 +72,9 @@ readUtf8File :: FilePath -> IO T.Text
 readUtf8File path = TE.decodeUtf8 <$> B.readFile path
 
 parseInput :: T.Text -> ([(Direc, Int)], [(Direc, Int)])
-parseInput txt = case T.lines txt of
+parseInput text = case T.lines text of
     [one, two] -> (parseLine one, parseLine two)
+    _ -> error "parseInput: number of lines not equal to 2"
   where
     parseLine :: T.Text -> [(Direc, Int)]
     parseLine = T.splitOn "," .> fmap readArc
