@@ -36,9 +36,9 @@ data ParamMode = Position | Immediate | Relative
 data IntcodeState = MkIntcodeState
     { instrPtr :: Int
     , relBase :: Int
-    , inputs :: [Int]
-    , outputs :: [Int]
-    , program :: IM.IntMap Int
+    , inputs :: [Integer]
+    , outputs :: [Integer]
+    , program :: IM.IntMap Integer
     } deriving (Eq, Ord, Read, Show)
 
 makeFieldLabelsWith noPrefixFieldLabels ''IntcodeState
@@ -48,18 +48,18 @@ main = do
     input <- parseInput <$> readFileUtf8 "day-09/input.txt"
     print $ part1 input
 
-part1 :: IM.IntMap Int -> Int
+part1 :: IM.IntMap Integer -> Integer
 part1 prog = case evalIntcodeProg [1] prog of
     [x] -> x
     out -> error $ [Printf.s|part1: bad output: %?|] out
 
-evalIntcodeProg :: [Int] -> IM.IntMap Int -> [Int]
+evalIntcodeProg :: [Integer] -> IM.IntMap Integer -> [Integer]
 evalIntcodeProg input prog = fst $ runIntcodeProg input prog
 
-execIntcodeProg :: [Int] -> IM.IntMap Int -> IM.IntMap Int
+execIntcodeProg :: [Integer] -> IM.IntMap Integer -> IM.IntMap Integer
 execIntcodeProg input prog = snd $ runIntcodeProg input prog
 
-runIntcodeProg :: [Int] -> IM.IntMap Int -> ([Int], IM.IntMap Int)
+runIntcodeProg :: [Integer] -> IM.IntMap Integer -> ([Integer], IM.IntMap Integer)
 runIntcodeProg input prog = (view #outputs res, view #program res)
   where
     res = execState interpretIntcodeProg $ MkIntcodeState
@@ -70,17 +70,17 @@ runIntcodeProg input prog = (view #outputs res, view #program res)
         , program = prog
         }
 
-readPosAbs :: Int -> State IntcodeState Int
+readPosAbs :: Int -> State IntcodeState Integer
 readPosAbs i = do
     prog <- gets (view #program)
     pure $ IM.findWithDefault 0 i prog
 
-readPosRelToIPtr :: Int -> State IntcodeState Int
+readPosRelToIPtr :: Int -> State IntcodeState Integer
 readPosRelToIPtr i = do
     iPtr <- gets (view #instrPtr)
     readPosAbs (iPtr + i)
 
-writePos :: Int -> Int -> State IntcodeState ()
+writePos :: Int -> Integer -> State IntcodeState ()
 writePos i val = #program % at i ?= val
 
 interpretIntcodeProg :: State IntcodeState ()
@@ -91,26 +91,28 @@ interpretIntcodeProg = do
         pure $ getOpcodeAndParamModes (prog IM.! iPtr)
 
     let readParam i = case indexDefault Position paramModes (i - 1) of
-            Position -> readPosRelToIPtr i >>= readPosAbs
             Immediate -> readPosRelToIPtr i
+            Position -> do
+                j <- readPosRelToIPtr i
+                readPosAbs $ fromInteger j
             Relative -> do
                 rel <- gets (view #relBase)
                 j <- readPosRelToIPtr i
-                readPosAbs (j + rel)
+                readPosAbs (fromInteger j + rel)
 
     case opCode of
         n | n `elem` [1, 2] -> do
             let op = if n == 1 then (+) else (*)
             x <- op <$> readParam 1 <*> readParam 2
             dest <- readPosRelToIPtr 3
-            writePos dest x
+            writePos (fromInteger dest) x
             #instrPtr += 4
             interpretIntcodeProg
 
         3 -> do
             ~(i : is) <- gets (view #inputs)
             dest <- readPosRelToIPtr 1
-            writePos dest i
+            writePos (fromInteger dest) i
             #inputs .= is
             #instrPtr += 2
             interpretIntcodeProg
@@ -127,7 +129,7 @@ interpretIntcodeProg = do
                 then #instrPtr += 3
                 else do
                     ptr <- readParam 2
-                    #instrPtr .= ptr
+                    #instrPtr .= fromInteger ptr
             interpretIntcodeProg
 
         n | n `elem` [7, 8] -> do
@@ -135,13 +137,13 @@ interpretIntcodeProg = do
                 runOp x y = if x `op` y then 1 else 0
             b <- runOp <$> readParam 1 <*> readParam 2
             dest <- readPosRelToIPtr 3
-            writePos dest b
+            writePos (fromInteger dest) b
             #instrPtr += 4
             interpretIntcodeProg
 
         9 -> do
             rel <- readParam 1
-            #relBase += rel
+            #relBase += fromInteger rel
             #instrPtr += 2
             interpretIntcodeProg
 
@@ -150,7 +152,7 @@ interpretIntcodeProg = do
         _ -> error $
             [Printf.s|interpretIntcodeProg: unexpected opcode %i|] opCode
 
-getOpcodeAndParamModes :: Int -> (Int, [ParamMode])
+getOpcodeAndParamModes :: Integer -> (Integer, [ParamMode])
 getOpcodeAndParamModes instr =
     (parseDigits opCode, fmap mkParamMode paramModes)
   where
@@ -166,10 +168,10 @@ getOpcodeAndParamModes instr =
     encountered unexpected param mode %i|]
                 instr p
 
-getDigits :: Int -> [Int]
+getDigits :: Integer -> [Int]
 getDigits = show .> fmap digitToInt
 
-parseDigits :: [Int] -> Int
+parseDigits :: [Int] -> Integer
 parseDigits = fmap intToDigit .> read
 
 indexDefault :: a -> [a] -> Int -> a
@@ -193,10 +195,10 @@ optic += x = optic %= (+ x)
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
 
-parseInput :: T.Text -> IM.IntMap Int
+parseInput :: T.Text -> IM.IntMap Integer
 parseInput = T.splitOn "," .> fmap readInt .> zip [0..] .> IM.fromList
   where
-    readInt :: T.Text -> Int
+    readInt :: T.Text -> Integer
     readInt txt = case TR.signed TR.decimal txt of
         Left _ -> error "parseInput: input not an Int"
         Right (n, _) -> n
