@@ -102,7 +102,7 @@ interpretIntcodeProg = do
         prog <- gets (view #program)
         pure $ getOpcodeAndParamModes (prog IM.! iPtr)
 
-    let readFromParam i = case indexDefault Position paramModes (i - 1) of
+    let readParam i = case indexDefault Position paramModes (i - 1) of
             Immediate -> readPosRelToIPtr i
             Position -> do
                 j <- readPosRelToIPtr i
@@ -112,8 +112,8 @@ interpretIntcodeProg = do
                 j <- readPosRelToIPtr i
                 readPosAbs (fromIntegral j + rel)
 
-        readToParam i = fmap fromIntegral $
-            case indexDefault Position paramModes (i - 1) of
+        writeParam i val = do
+            dest <- case indexDefault Position paramModes (i - 1) of
                 Immediate -> error
                     "interpretIntcodeProg: encountered write parameter in \
                     \immediate-mode"
@@ -122,50 +122,48 @@ interpretIntcodeProg = do
                     rel <- gets (view #relBase)
                     j <- readPosRelToIPtr i
                     pure (j + fromIntegral rel)
+            writePos (fromIntegral dest) val
 
     case opCode of
         n | n `elem` [1, 2] -> do
             let op = if n == 1 then (+) else (*)
-            x <- op <$> readFromParam 1 <*> readFromParam 2
-            dest <- readToParam 3
-            writePos dest x
+            x <- op <$> readParam 1 <*> readParam 2
+            writeParam 3 x
             #instrPtr += 4
             interpretIntcodeProg
 
         3 -> do
             ~(i : is) <- gets (view #inputs)
-            dest <- readToParam 1
-            writePos dest i
+            writeParam 1 i
             #inputs .= is
             #instrPtr += 2
             interpretIntcodeProg
 
         4 -> do
-            x <- readFromParam 1
+            x <- readParam 1
             #outputs %= cons x
             #instrPtr += 2
             interpretIntcodeProg
 
         n | n `elem` [5, 6] -> do
-            zero <- (== 0) <$> readFromParam 1
+            zero <- (== 0) <$> readParam 1
             if zero `xor` (n == 6)
                 then #instrPtr += 3
                 else do
-                    ptr <- readFromParam 2
+                    ptr <- readParam 2
                     #instrPtr .= fromIntegral ptr
             interpretIntcodeProg
 
         n | n `elem` [7, 8] -> do
             let op = if n == 7 then (<) else (==)
                 runOp x y = if x `op` y then 1 else 0
-            b <- runOp <$> readFromParam 1 <*> readFromParam 2
-            dest <- readToParam 3
-            writePos dest b
+            b <- runOp <$> readParam 1 <*> readParam 2
+            writeParam 3 b
             #instrPtr += 4
             interpretIntcodeProg
 
         9 -> do
-            rel <- readFromParam 1
+            rel <- readParam 1
             #relBase += fromIntegral rel
             #instrPtr += 2
             interpretIntcodeProg
