@@ -108,13 +108,14 @@ interpretIntcodeProg = do
 
         readToParam i = fmap fromIntegral $
             case indexDefault Position paramModes (i - 1) of
-                mode | mode `elem` [Immediate, Position] -> do
-                    j <- readPosRelToIPtr i
-                    readPosAbs $ fromIntegral j
+                Immediate -> error
+                    "interpretIntcodeProg: encountered write parameter in \
+                    \immediate-mode"
+                Position -> readPosRelToIPtr i
                 Relative -> do
                     rel <- gets (view #relBase)
                     j <- readPosRelToIPtr i
-                    readPosAbs (fromIntegral j + rel)
+                    pure (j + fromIntegral rel)
 
     case opCode of
         n | n `elem` [1, 2] -> do
