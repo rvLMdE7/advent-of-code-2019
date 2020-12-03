@@ -104,9 +104,7 @@ interpretIntcodeProg = do
 
     let readParam i = case indexDefault Position paramModes (i - 1) of
             Immediate -> readPosRelToIPtr i
-            Position -> do
-                j <- readPosRelToIPtr i
-                readPosAbs $ fromIntegral j
+            Position -> readPosRelToIPtr i >>= fromIntegral .> readPosAbs
             Relative -> do
                 rel <- gets (view #relBase)
                 j <- readPosRelToIPtr i
@@ -127,27 +125,27 @@ interpretIntcodeProg = do
     case opCode of
         n | n `elem` [1, 2] -> do
             let op = if n == 1 then (+) else (*)
-            x <- op <$> readParam 1 <*> readParam 2
-            writeParam 3 x
+            val <- op <$> readParam 1 <*> readParam 2
+            writeParam 3 val
             #instrPtr += 4
             interpretIntcodeProg
 
         3 -> do
-            ~(i : is) <- gets (view #inputs)
-            writeParam 1 i
-            #inputs .= is
+            ~(inp : inps) <- gets (view #inputs)
+            writeParam 1 inp
+            #inputs .= inps
             #instrPtr += 2
             interpretIntcodeProg
 
         4 -> do
-            x <- readParam 1
-            #outputs %= cons x
+            val <- readParam 1
+            #outputs %= cons val
             #instrPtr += 2
             interpretIntcodeProg
 
         n | n `elem` [5, 6] -> do
-            zero <- (== 0) <$> readParam 1
-            if zero `xor` (n == 6)
+            val <- readParam 1
+            if (val == 0) `xor` (n == 6)
                 then #instrPtr += 3
                 else do
                     ptr <- readParam 2
@@ -155,10 +153,10 @@ interpretIntcodeProg = do
             interpretIntcodeProg
 
         n | n `elem` [7, 8] -> do
-            let op = if n == 7 then (<) else (==)
-                runOp x y = if x `op` y then 1 else 0
-            b <- runOp <$> readParam 1 <*> readParam 2
-            writeParam 3 b
+            let compOp = if n == 7 then (<) else (==)
+                comp x y = if x `compOp` y then 1 else 0
+            val <- comp <$> readParam 1 <*> readParam 2
+            writeParam 3 val
             #instrPtr += 4
             interpretIntcodeProg
 
