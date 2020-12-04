@@ -33,6 +33,7 @@ runIntcodeProg iPtr prog = case prog V.! iPtr of
     1 -> applyBinaryOp (+)
     2 -> applyBinaryOp (*)
     99 -> prog
+    n -> error $ "runIntcodeProg: bad opcode: " <> show n
   where
     applyBinaryOp op =
       let
