@@ -5,6 +5,9 @@
 module Day10 where
 
 import Data.ByteString qualified as B
+import Data.List qualified as L
+import Data.Ord (comparing)
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Vector qualified as V
@@ -34,23 +37,35 @@ instance Num a => Num (V2 a) where
 type Grid a = V.Vector (V.Vector a)
 
 main :: IO ()
-main = pure ()
+main = do
+    input <- parseInput <$> readFileUtf8 "day-10/input.txt"
+    print $ part1 input
 
 part1 :: Grid Tile -> Int
-part1 = undefined
+part1 grid = S.size $ snd $
+    maxMatchesRadiatingOut Asteroid (indicesOf Asteroid grid) grid
 
-maxMatchesRadiatingOut :: Eq a => Grid a -> (V2 Int, [V2 Int])
-maxMatchesRadiatingOut = undefined
+maxMatchesRadiatingOut
+    :: Eq a => a -> S.Set (V2 Int) -> Grid a -> (V2 Int, S.Set (V2 Int))
+maxMatchesRadiatingOut x pts grid =
+    L.maximumBy (comparing $ snd .> length) $
+        allMatchesRadiatingOut x pts grid
 
-firstMatchesRadiatingOut :: Eq a => a -> V2 Int -> Grid a -> [V2 Int]
-firstMatchesRadiatingOut x base grid = do
-    ray <- pointsBetween base <$> boundaryPoints grid
-    case filter (\pt -> index pt grid == x) ray of
+allMatchesRadiatingOut
+    :: Eq a => a -> S.Set (V2 Int) -> Grid a -> [(V2 Int, S.Set (V2 Int))]
+allMatchesRadiatingOut x pts grid = do
+    pt <- S.toList pts
+    pure (pt, firstMatchesRadiatingOut x pt grid)
+
+firstMatchesRadiatingOut :: Eq a => a -> V2 Int -> Grid a -> S.Set (V2 Int)
+firstMatchesRadiatingOut x base grid = S.fromList $ do
+    ray <- pointsFromTo base <$> S.toList (boundaryPoints grid)
+    case filter (\pt -> index grid pt == x) ray of
         [] -> empty
         pt : _ -> pure pt
 
-boundaryPoints :: Grid a -> [V2 Int]
-boundaryPoints grid = mconcat
+boundaryPoints :: Grid a -> S.Set (V2 Int)
+boundaryPoints grid = S.fromList $ mconcat
     [ [ MkV2 0 y | y <- [0..rows-1] ]
     , [ MkV2 (cols - 1) y | y <- [0..rows-1] ]
     , [ MkV2 x 0 | x <- [1..cols-2] ]
@@ -60,20 +75,21 @@ boundaryPoints grid = mconcat
     rows = V.length grid
     cols = V.length $ V.head grid
 
-pointsBetween :: V2 Int -> V2 Int -> [V2 Int]
-pointsBetween p1@(MkV2 x1 y1) p2@(MkV2 x2 y2) =
-    [ p1 + pure i * step | i <- [1 .. count-1] ]
+pointsFromTo :: V2 Int -> V2 Int -> [V2 Int]
+pointsFromTo p1@(MkV2 x1 y1) p2@(MkV2 x2 y2) = do
+    i <- [1 .. count]
+    pure $ p1 + pure i * step
   where
     xDiff = abs $ x2 - x1
     yDiff = abs $ y2 - y1
     count = gcd xDiff yDiff
     step = fmap (`div` count) (p2 - p1)
 
-index :: V2 Int -> Grid a -> a
-index (MkV2 x y) grid = grid V.! y V.! x
+index :: Grid a -> V2 Int -> a
+index grid (MkV2 x y) = grid V.! y V.! x
 
-matches :: Eq a => a -> Grid a -> [V2 Int]
-matches val grid = V.toList $ do
+indicesOf :: Eq a => a -> Grid a -> S.Set (V2 Int)
+indicesOf val grid = S.fromList $ V.toList $ do
     (y, vec) <- V.indexed grid
     x <- V.elemIndices val vec
     pure $ MkV2 x y
@@ -83,12 +99,11 @@ readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
 
 parseInput :: T.Text -> Grid Tile
 parseInput =
-    T.lines .> V.fromList .> fmap (T.unpack .> V.fromList) .> ffmap charToTile
+    T.lines
+        .> V.fromList
+        .> fmap (T.unpack .> V.fromList .> fmap charToTile)
   where
     charToTile c = case c of
         '.' -> Empty
         '#' -> Asteroid
         _ -> error $ [Printf.s|parseInput: char '%c' not in {'.', '#'}|] c
-
-ffmap :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
-ffmap f = fmap (fmap f)
