@@ -27,6 +27,7 @@ common common-lib-options
     , text
     , th-printf
     , vector
+    , pretty-simple
   ghc-options: -Wall
 
 common common-exe-options
