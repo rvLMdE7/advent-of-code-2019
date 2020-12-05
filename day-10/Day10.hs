@@ -5,15 +5,17 @@
 module Day10 where
 
 import Data.ByteString qualified as B
-import Data.List qualified as L
-import Data.Ord (comparing)
+import Data.Maybe (listToMaybe)
 import Data.Set qualified as S
+import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Vector qualified as V
 import Flow ((.>))
 import Language.Haskell.Printf qualified as Printf
-import Control.Applicative (empty, liftA2)
+import Control.Applicative (liftA2)
+import Control.Arrow ((&&&), second)
+import Data.Ord (comparing)
 
 
 data Tile = Empty | Asteroid
@@ -36,63 +38,102 @@ instance Num a => Num (V2 a) where
 
 type Grid a = V.Vector (V.Vector a)
 
+data Visibility = Unknown | Visible | Invisible | Obscured
+    deriving (Bounded, Enum, Eq, Ord, Read, Show)
+
 main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-10/input.txt"
     print $ part1 input
 
 part1 :: Grid Tile -> Int
-part1 grid = S.size $ snd $
-    maxMatchesRadiatingOut Asteroid (indicesOf Asteroid grid) grid
+part1 = bestIndex .> snd
 
-maxMatchesRadiatingOut
-    :: Eq a => a -> S.Set (V2 Int) -> Grid a -> (V2 Int, S.Set (V2 Int))
-maxMatchesRadiatingOut x pts grid =
-    L.maximumBy (comparing $ snd .> length) $
-        allMatchesRadiatingOut x pts grid
+bestIndex :: Grid Tile -> (V2 Int, Int)
+bestIndex =
+    allMatchingIndicesRadiatingOut Asteroid
+        .> S.toList
+        .> L.maximumBy (comparing $ snd .> S.size)
+        .> second S.size
 
-allMatchesRadiatingOut
-    :: Eq a => a -> S.Set (V2 Int) -> Grid a -> [(V2 Int, S.Set (V2 Int))]
-allMatchesRadiatingOut x pts grid = do
-    pt <- S.toList pts
-    pure (pt, firstMatchesRadiatingOut x pt grid)
-
-firstMatchesRadiatingOut :: Eq a => a -> V2 Int -> Grid a -> S.Set (V2 Int)
-firstMatchesRadiatingOut x base grid = S.fromList $ do
-    ray <- pointsFromTo base <$> S.toList (boundaryPoints grid)
-    case filter (\pt -> index grid pt == x) ray of
-        [] -> empty
-        pt : _ -> pure pt
-
-boundaryPoints :: Grid a -> S.Set (V2 Int)
-boundaryPoints grid = S.fromList $ mconcat
-    [ [ MkV2 0 y | y <- [0..rows-1] ]
-    , [ MkV2 (cols - 1) y | y <- [0..rows-1] ]
-    , [ MkV2 x 0 | x <- [1..cols-2] ]
-    , [ MkV2 x (rows - 1) | x <- [1..cols-2] ]
-    ]
+allMatchingIndicesRadiatingOut
+    :: Eq a => a -> Grid a -> S.Set (V2 Int, S.Set (V2 Int))
+allMatchingIndicesRadiatingOut val grid =
+    S.map (id &&& firstMatchesRadiatingOut val grid) matchingIndices
   where
-    rows = V.length grid
-    cols = V.length $ V.head grid
+    matchingIndices = S.filter (\pt -> index grid pt == val) $ allIndices grid
 
-pointsFromTo :: V2 Int -> V2 Int -> [V2 Int]
-pointsFromTo p1@(MkV2 x1 y1) p2@(MkV2 x2 y2) = do
-    i <- [1 .. count]
-    pure $ p1 + pure i * step
+firstMatchesRadiatingOut :: Eq a => a -> Grid a -> V2 Int -> S.Set (V2 Int)
+firstMatchesRadiatingOut val grid base = go initGrid
+  where
+    initVal x = if x == val then Unknown else Invisible
+    initGrid = setIndex base Invisible $ fmap (fmap initVal) grid
+    isVal pt = index grid pt == val
+    block pt f = setIndex pt Obscured .> f
+    go gridVis = case firstIndexOf Unknown gridVis of
+        Just pt ->
+          let
+            ray = drop 1 $
+                takeWhile (inBounds gridVis) $ pointsFromInDirOf base pt
+            updateGrid = case dropWhile (isVal .> not) ray of
+                vis : blocked ->
+                    foldr block (setIndex vis Visible) (filter isVal blocked)
+                [] -> error "firstMatchesRadiatingOut: impossible"
+          in
+            go (updateGrid gridVis)
+        Nothing -> indices Visible gridVis
+
+pointsFromInDirOf :: V2 Int -> V2 Int -> [V2 Int]
+pointsFromInDirOf p1@(MkV2 x1 y1) p2@(MkV2 x2 y2)
+    | p1 == p2 = []
+    | otherwise = do
+        i <- [0..]
+        pure $ p1 + pure i * step
   where
     xDiff = abs $ x2 - x1
     yDiff = abs $ y2 - y1
     count = gcd xDiff yDiff
     step = fmap (`div` count) (p2 - p1)
 
-index :: Grid a -> V2 Int -> a
-index grid (MkV2 x y) = grid V.! y V.! x
-
-indicesOf :: Eq a => a -> Grid a -> S.Set (V2 Int)
-indicesOf val grid = S.fromList $ V.toList $ do
+indices :: Eq a => a -> Grid a -> S.Set (V2 Int)
+indices val grid = S.fromList $ V.toList $ do
     (y, vec) <- V.indexed grid
     x <- V.elemIndices val vec
     pure $ MkV2 x y
+
+firstIndexOf :: Eq a => a -> Grid a -> Maybe (V2 Int)
+firstIndexOf val grid = listToMaybe $ V.toList $ do
+    (y, vec) <- V.indexed grid
+    x <- V.elemIndices val vec
+    pure $ MkV2 x y
+
+allIndices :: Grid a -> S.Set (V2 Int)
+allIndices grid = S.fromList $ do
+    x <- [0 .. rows-1]
+    y <- [0 .. cols-1]
+    pure $ MkV2 x y
+  where
+    MkV2 cols rows = dimen grid
+
+inBounds :: Grid a -> V2 Int -> Bool
+inBounds grid (MkV2 x y) = between 0 (cols - 1) x && between 0 (rows - 1) y
+  where
+    MkV2 cols rows = dimen grid
+
+dimen :: Grid a -> V2 Int
+dimen grid = MkV2 cols rows
+  where
+    rows = V.length grid
+    cols = if rows == 0 then 0 else V.length (V.head grid)
+
+index :: Grid a -> V2 Int -> a
+index grid (MkV2 x y) = grid V.! y V.! x
+
+setIndex :: V2 Int -> a -> Grid a -> Grid a
+setIndex (MkV2 x y) val grid = grid V.// [(y, (grid V.! y) V.// [(x, val)])]
+
+between :: Ord a => a -> a -> a -> Bool
+between a b x = (a <= x) && (x <= b)
 
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
