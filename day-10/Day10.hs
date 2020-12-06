@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -8,6 +9,7 @@ import Data.ByteString qualified as B
 import Data.Maybe (listToMaybe)
 import Data.Set qualified as S
 import Data.List qualified as L
+import Data.Map qualified as M
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Vector qualified as V
@@ -66,22 +68,23 @@ allMatchingIndicesRadiatingOut val grid =
 firstMatchesRadiatingOut :: Eq a => a -> Grid a -> V2 Int -> S.Set (V2 Int)
 firstMatchesRadiatingOut val grid base = go initGrid
   where
-    initVal x = if x == val then Unknown else Invisible
-    initGrid = setIndex base Invisible $ fmap (fmap initVal) grid
     isVal pt = index grid pt == val
-    block pt f = setIndex pt Obscured .> f
-    go gridVis = case firstIndexOf Unknown gridVis of
-        Just pt ->
+    initVal pt
+        | pt == base = Invisible
+        | isVal pt = Unknown
+        | otherwise = Invisible
+    initGrid = M.fromSet initVal (allIndices grid)
+    gridPtsEq x = M.assocs .> filter (snd .> (== x)) .> fmap fst
+    go gridVis = case gridPtsEq Unknown gridVis of
+        pt : _ ->
           let
-            ray = drop 1 $
-                takeWhile (inBounds gridVis) $ pointsFromInDirOf base pt
-            updateGrid = case dropWhile (isVal .> not) ray of
-                vis : blocked ->
-                    foldr block (setIndex vis Visible) (filter isVal blocked)
+            ray = drop 1 $ takeWhile (inBounds grid) $ pointsFromInDirOf base pt
+            updates = case dropWhile (isVal .> not) ray of
+                v : os -> M.fromList $ (v, Visible) : fmap (, Obscured) os
                 [] -> error "firstMatchesRadiatingOut: impossible"
           in
-            go (updateGrid gridVis)
-        Nothing -> indices Visible gridVis
+            go $ M.union updates gridVis
+        [] -> S.fromList $ gridPtsEq Visible gridVis
 
 pointsFromInDirOf :: V2 Int -> V2 Int -> [V2 Int]
 pointsFromInDirOf p1@(MkV2 x1 y1) p2@(MkV2 x2 y2)
@@ -94,18 +97,6 @@ pointsFromInDirOf p1@(MkV2 x1 y1) p2@(MkV2 x2 y2)
     yDiff = abs $ y2 - y1
     count = gcd xDiff yDiff
     step = fmap (`div` count) (p2 - p1)
-
-indices :: Eq a => a -> Grid a -> S.Set (V2 Int)
-indices val grid = S.fromList $ V.toList $ do
-    (y, vec) <- V.indexed grid
-    x <- V.elemIndices val vec
-    pure $ MkV2 x y
-
-firstIndexOf :: Eq a => a -> Grid a -> Maybe (V2 Int)
-firstIndexOf val grid = listToMaybe $ V.toList $ do
-    (y, vec) <- V.indexed grid
-    x <- V.elemIndices val vec
-    pure $ MkV2 x y
 
 allIndices :: Grid a -> S.Set (V2 Int)
 allIndices grid = S.fromList $ do
@@ -128,9 +119,6 @@ dimen grid = MkV2 cols rows
 
 index :: Grid a -> V2 Int -> a
 index grid (MkV2 x y) = grid V.! y V.! x
-
-setIndex :: V2 Int -> a -> Grid a -> Grid a
-setIndex (MkV2 x y) val grid = grid V.// [(y, (grid V.! y) V.// [(x, val)])]
 
 between :: Ord a => a -> a -> a -> Bool
 between a b x = (a <= x) && (x <= b)
