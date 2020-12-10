@@ -25,6 +25,7 @@ import Data.Sequence (Seq((:<|), (:|>)))
 import Data.Sequence qualified as Seq
 import Data.Set qualified as Set
 import Data.Text qualified as T
+import Data.Text.IO qualified as TIO
 import Data.Text.Encoding qualified as TE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Read qualified as TR
@@ -75,15 +76,36 @@ main :: IO ()
 main = do
     prog <- parseInput <$> readFileUtf8 "day-11/input.txt"
     print $ part1 prog
+    TIO.putStr $ part2 prog
 
 part1 :: IM.IntMap Int -> Int
-part1 = runRobot .> view #trail .> drop1End .> seqToSet .> Set.size
+part1 = runRobot M.empty .> view #trail .> drop1End .> seqToSet .> Set.size
   where
     seqToSet = F.toList .> Set.fromList
     drop1End xs = Seq.deleteAt (Seq.length xs - 1) xs
 
-runRobot :: IM.IntMap Int -> Robot
-runRobot prog = execState interpRobot $ MkRobot
+part2 :: IM.IntMap Int -> T.Text
+part2 = runRobot hull .> view #hullGrid .> displayGrid showCol
+  where
+    hull = M.singleton (0, 0) White
+    showCol = maybe '.' $ \case
+        White -> '#'
+        Black -> '.'
+
+displayGrid :: (Maybe a -> Char) -> M.Map (Int, Int) a -> T.Text
+displayGrid f grid = T.unlines $ do
+    y <- reverse [yMin .. yMax]
+    pure $ T.pack $ do
+        x <- [xMin .. xMax]
+        pure $ f $ M.lookup (x, y) grid
+  where
+    keys = M.keysSet grid
+    (xs, ys) = (Set.map fst keys, Set.map snd keys)
+    (xMin, yMin) = (Set.findMin xs, Set.findMin ys)
+    (xMax, yMax) = (Set.findMax xs, Set.findMax ys)
+
+runRobot :: M.Map (Int, Int) PanelCol -> IM.IntMap Int -> Robot
+runRobot hull prog = execState interpRobot $ MkRobot
     { intcode = MkIntcode
         { instrPtr = 0
         , relBase = 0
@@ -94,7 +116,7 @@ runRobot prog = execState interpRobot $ MkRobot
         , pauseOnMissingInput = True
         }
     , position = (0, 0)
-    , hullGrid = M.empty
+    , hullGrid = hull
     , orientation = North
     , trail = Seq.singleton (0, 0)
     }
